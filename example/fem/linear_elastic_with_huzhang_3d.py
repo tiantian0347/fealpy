@@ -2,8 +2,8 @@
 import matplotlib.pyplot as plt
 
 from fealpy.backend import backend_manager as bm
-from fealpy.mesh import TriangleMesh
-from fealpy.functionspace.huzhang_fe_space_2d import HuZhangFESpace2d
+from fealpy.mesh import TetrahedronMesh
+from fealpy.functionspace.huzhang_fe_space_3d import HuZhangFESpace3d
 from fealpy.functionspace import LagrangeFESpace, TensorFunctionSpace
 
 from fealpy.fem.huzhang_stress_integrator import HuZhangStressIntegrator
@@ -33,11 +33,11 @@ import time
 
 
 def solve(pde, N, p):
-    mesh = TriangleMesh.from_box([0, 1, 0, 1], nx=N, ny=N)
-    space0 = HuZhangFESpace2d(mesh, p=p)
+    mesh = TetrahedronMesh.from_box([0, 1, 0, 1, 0, 1], nx=N, ny=N, nz=N)
+    space0 = HuZhangFESpace3d(mesh, p=p)
 
     space = LagrangeFESpace(mesh, p=p-1, ctype='D')
-    space1 = TensorFunctionSpace(space, shape=(-1, 2))
+    space1 = TensorFunctionSpace(space, shape=(-1, 3))
 
     lambda0 = pde.lambda0
     lambda1 = pde.lambda1
@@ -48,12 +48,14 @@ def solve(pde, N, p):
     bform1 = BilinearForm(space0)
     bform1.add_integrator(HuZhangStressIntegrator(lambda0=lambda0, lambda1=lambda1))
 
+    A = bform1.assembly()
     bform2 = BilinearForm((space1,space0))
     bform2.add_integrator(HuZhangMixIntegrator())
 
-    A = BlockForm([[bform1,bform2],
-                   [bform2.T,None]])
-    A = A.assembly()
+    B = bform2.assembly()
+    #A = BlockForm([[bform1,bform2],
+    #               [bform2.T,None]])
+    #A = A.assembly()
 
     lform1 = LinearForm(space1)
 
@@ -95,15 +97,19 @@ if __name__ == "__main__":
     errorMatrix = bm.zeros((2, maxit), dtype=bm.float64)
     h = bm.zeros(maxit, dtype=bm.float64)
 
-    x, y = symbols('x y')
+    x, y, z = symbols('x y z')
 
     pi = bm.pi 
-    u0 = (sin(pi*x)*sin(pi*y))**2
-    u1 = (sin(pi*x)*sin(pi*y))**2
+    #u0 = (sin(pi*x)*sin(pi*y))**2
+    #u1 = (sin(pi*x)*sin(pi*y))**2
     #u0 = sin(5*x)*sin(7*y)
     #u1 = cos(5*x)*cos(4*y)
 
-    u = [u0, u1]
+    u0 = sin(pi*x)*sin(pi*y)*sin(pi*z)
+    u1 = sin(pi*x)*sin(pi*y)*sin(pi*z)
+    u2 = sin(pi*x)*sin(pi*y)*sin(pi*z)
+
+    u = [u0, u1, u2]
     pde = LinearElasticPDE(u, lambda0, lambda1)
 
     for i in range(maxit):
