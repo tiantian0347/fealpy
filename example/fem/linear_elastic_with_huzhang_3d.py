@@ -18,7 +18,7 @@ from fealpy.fem import LinearForm, ScalarSourceIntegrator,BoundaryFaceSourceInte
 from fealpy.fem import DivIntegrator
 from fealpy.fem import BlockForm,LinearBlockForm
 
-from linear_elastic_pde import LinearElasticPDE
+from linear_elastic_pde import LinearElasticPDE, LinearElasticPDE3d
 
 from sympy import symbols, sin, cos, Matrix, lambdify
 
@@ -45,17 +45,20 @@ def solve(pde, N, p):
     gdof0 = space0.number_of_global_dofs()
     gdof1 = space1.number_of_global_dofs()
 
+    def coef_func(p, index=None):
+        return bm.ones_like(p)
+
     bform1 = BilinearForm(space0)
     bform1.add_integrator(HuZhangStressIntegrator(lambda0=lambda0, lambda1=lambda1))
 
-    A = bform1.assembly()
+    #A = bform1.assembly()
     bform2 = BilinearForm((space1,space0))
     bform2.add_integrator(HuZhangMixIntegrator())
 
     B = bform2.assembly()
-    #A = BlockForm([[bform1,bform2],
-    #               [bform2.T,None]])
-    #A = A.assembly()
+    A = BlockForm([[bform1,bform2],
+                   [bform2.T,None]])
+    A = A.assembly()
 
     lform1 = LinearForm(space1)
 
@@ -110,7 +113,7 @@ if __name__ == "__main__":
     u2 = sin(pi*x)*sin(pi*y)*sin(pi*z)
 
     u = [u0, u1, u2]
-    pde = LinearElasticPDE(u, lambda0, lambda1)
+    pde = LinearElasticPDE3d(u, lambda0, lambda1)
 
     for i in range(maxit):
         N = 2**(i+1) 

@@ -11,7 +11,7 @@ from fealpy.fem.huzhang_stress_integrator import HuZhangStressIntegrator
 from fealpy.fem.huzhang_mix_integrator import HuZhangMixIntegrator
 from fealpy.fem import VectorSourceIntegrator
 
-from fealpy.decorator import cartesian
+from fealpy.decorator import cartesian, barycentric
 
 from fealpy.fem import BilinearForm,ScalarMassIntegrator
 from fealpy.fem import LinearForm, ScalarSourceIntegrator,BoundaryFaceSourceIntegrator
@@ -45,8 +45,16 @@ def solve(pde, N, p):
     gdof0 = space0.number_of_global_dofs()
     gdof1 = space1.number_of_global_dofs()
 
+    @cartesian
+    def coef_func(p, index=None):
+        return bm.ones(p.shape[:-1], dtype=bm.float64)
+    
+    @barycentric
+    def coef_func_bary(bcs, index=None):
+        return bm.ones((1, )+bcs.shape[:-1], dtype=bm.float64)
+
     bform1 = BilinearForm(space0)
-    bform1.add_integrator(HuZhangStressIntegrator(lambda0=lambda0, lambda1=lambda1))
+    bform1.add_integrator(HuZhangStressIntegrator(coef=coef_func_bary, lambda0=lambda0, lambda1=lambda1))
 
     bform2 = BilinearForm((space1,space0))
     bform2.add_integrator(HuZhangMixIntegrator())
